@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Video Editor</title>
+    <style>
+        #sliderContainer {
+            width: 400px;
+            position: relative;
+            margin: 20px 0;
+        }
+
+        #slider {
+            width: 100%;
+            height: 6px;
+            background: #ddd;
+            border-radius: 3px;
+            outline: none;
+            position: absolute;
+            top: 0;
+            cursor: pointer;
+        }
+
+        .thumb {
+            width: 16px;
+            height: 16px;
+            background: #007bff;
+            border-radius: 50%;
+            position: absolute;
+            top: -5px;
+            cursor: pointer;
+            z-index: 3;
+        }
+
+        .range {
+            position: absolute;
+            height: 6px;
+            background: #007bff;
+            top: 0;
+            z-index: 1;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Video Editor</h1>
+    <video id="videoPlayer" width="400" controls>
+        <source src="{{ url_for('uploaded_file', filename=video_path) }}" type="video/mp4">
+        Your browser does not support the video tag.
+    </video>
+
+    <div id="sliderContainer">
+        <input type="range" id="slider" min="0" max="{{ video_duration }}" step="0.1" value="0">
+        <div class="thumb" id="startThumb" data-value="0"></div>
+        <div class="thumb" id="endThumb" data-value="{{ video_duration }}"></div>
+        <div class="range" id="selectedRange"></div>
+    </div>
+    <p>Start Time: <span id="startLabel">0</span>s</p>
+    <p>End Time: <span id="endLabel">{{ video_duration }}</span>s</p>
+    <p>Video Duration: <span id="videoDuration">{{ video_duration }}</span> seconds</p>
+
+    <script>
+        const videoPlayer = document.getElementById('videoPlayer');
+        const slider = document.getElementById('slider');
+        const startThumb = document.getElementById('startThumb');
+        const endThumb = document.getElementById('endThumb');
+        const selectedRange = document.getElementById('selectedRange');
+        const startLabel = document.getElementById('startLabel');
+        const endLabel = document.getElementById('endLabel');
+
+        let isDraggingStart = false;
+        let isDraggingEnd = false;
+
+        function updateUI() {
+            const min = parseFloat(slider.min);
+            const max = parseFloat(slider.max);
+            const startValue = parseFloat(startThumb.dataset.value);
+            const endValue = parseFloat(endThumb.dataset.value);
+
+            const startPercent = ((startValue - min) / (max - min)) * 100;
+            const endPercent = ((endValue - min) / (max - min)) * 100;
+
+            startThumb.style.left = `calc(${startPercent}% - 8px)`;
+            endThumb.style.left = `calc(${endPercent}% - 8px)`;
+            selectedRange.style.left = `${startPercent}%`;
+            selectedRange.style.width = `${endPercent - startPercent}%`;
+
+            startLabel.innerText = startValue.toFixed(1);
+            endLabel.innerText = endValue.toFixed(1);
+
+            videoPlayer.currentTime = startValue;
+        }
+
+        function updateVideoTime() {
+            const startTime = parseFloat(startThumb.dataset.value);
+            const endTime = parseFloat(endThumb.dataset.value);
+
+            if (videoPlayer.currentTime >= endTime) {
+                videoPlayer.currentTime = startTime;
+                videoPlayer.pause();
+            }
+        }
+
+        function handleDrag(event) {
+            const rect = slider.getBoundingClientRect();
+            const sliderWidth = rect.width;
+            const offsetX = event.clientX - rect.left;
+            const percentage = Math.min(Math.max(0, offsetX / sliderWidth), 1);
+            const value = percentage * (parseFloat(slider.max) - parseFloat(slider.min)) + parseFloat(slider.min);
+
+            if (isDraggingStart) {
+                if (value < parseFloat(endThumb.dataset.value)) {
+                    startThumb.dataset.value = value;
+                }
+            } else if (isDraggingEnd) {
+                if (value > parseFloat(startThumb.dataset.value)) {
+                    endThumb.dataset.value = value;
+                }
+            }
+            updateUI();
+        }
+
+        function startDragStart() {
+            isDraggingStart = true;
+            document.addEventListener('mousemove', handleDrag);
+            document.addEventListener('mouseup', stopDragStart);
+        }
+
+        function startDragEnd() {
+            isDraggingEnd = true;
+            document.addEventListener('mousemove', handleDrag);
+            document.addEventListener('mouseup', stopDragEnd);
+        }
+
+        function stopDragStart() {
+            isDraggingStart = false;
+            document.removeEventListener('mousemove', handleDrag);
+            document.removeEventListener('mouseup', stopDragStart);
+        }
+
+        function stopDragEnd() {
+            isDraggingEnd = false;
+            document.removeEventListener('mousemove', handleDrag);
+            document.removeEventListener('mouseup', stopDragEnd);
+        }
+
+        slider.addEventListener('input', function() {
+            // No direct handling needed as it's controlled by dragging
+        });
+
+        startThumb.addEventListener('mousedown', startDragStart);
+        endThumb.addEventListener('mousedown', startDragEnd);
+
+        videoPlayer.addEventListener('timeupdate', updateVideoTime);
+
+        // Initialize slider
+        updateUI();
+    </script>
+</body>
+</html>

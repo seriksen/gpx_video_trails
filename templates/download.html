@@ -1,0 +1,11 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Download Cropped Video</title>
+</head>
+<body>
+    <h1>Your cropped video is ready!</h1>
+    <a href="{{ url_for('static', filename='uploads/' + filename) }}" download>Download Cropped Video</a>
+</body>
+</html>
